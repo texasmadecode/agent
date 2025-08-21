@@ -1,0 +1,10 @@
+# Minimal requirements for development
+fastapi
+uvicorn
+pydantic
+python-multipart
+sqlalchemy
+alembic
+python-dotenv
+jinja2
+requests

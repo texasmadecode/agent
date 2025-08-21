@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 import logging
 import os
+from datetime import datetime
 
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -72,6 +73,34 @@ if os.path.exists("static"):
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers."""
+    try:
+        # Test database connection
+        from app.core.database import SessionLocal
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "services": {
+                "database": "connected",
+                "api": "running"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }
 
 
 @app.get("/", response_class=HTMLResponse)

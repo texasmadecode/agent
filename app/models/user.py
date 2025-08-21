@@ -5,7 +5,7 @@ This module defines the database models for users, clients,
 and their associated authentication and settings.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -53,7 +53,7 @@ class Client(Base):
     brand_guidelines = Column(Text)  # Additional brand guidelines
     
     # User association
-    user_id = Column(Integer, nullable=False)  # Foreign key to users table
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Status and metadata
     is_active = Column(Boolean, default=True)
@@ -74,7 +74,7 @@ class SocialAccount(Base):
     __tablename__ = "social_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, nullable=False)  # Foreign key to clients table
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     platform = Column(String(50), nullable=False)  # twitter, facebook, instagram, etc.
     account_name = Column(String(255))
     account_id = Column(String(255))  # Platform-specific account ID
@@ -105,7 +105,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
     
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, nullable=False)  # Foreign key to clients table
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)
     

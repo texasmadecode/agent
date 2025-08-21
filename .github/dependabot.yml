@@ -1,0 +1,40 @@
+version: 2
+updates:
+  # Enable version updates for Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "yourusername"
+    assignees:
+      - "yourusername"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Enable version updates for Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "yourusername"
+    assignees:
+      - "yourusername"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "yourusername"
+    assignees:
+      - "yourusername"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

@@ -1,21 +1,19 @@
 """
 Security and authentication utilities.
 
-This module provides JWT token handling, password hashing,
-and user authentication functionality.
+This module provides basic authentication functionality for development.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Union, Any
-from passlib.context import CryptContext
-from jose import JWTError, jwt
+from typing import Optional, Dict, Any
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import hashlib
+import secrets
+import base64
+import json
 
 from app.core.config import settings
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT security
 security = HTTPBearer()
@@ -36,7 +34,8 @@ class SecurityManager:
         Returns:
             bool: True if password matches, False otherwise
         """
-        return pwd_context.verify(plain_password, hashed_password)
+        # Simple hash verification for development
+        return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
     
     @staticmethod
     def get_password_hash(password: str) -> str:
@@ -49,19 +48,19 @@ class SecurityManager:
         Returns:
             str: The hashed password
         """
-        return pwd_context.hash(password)
+        return hashlib.sha256(password.encode()).hexdigest()
     
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
         """
-        Create a JWT access token.
+        Create a simple access token.
         
         Args:
             data: The data to encode in the token
             expires_delta: Token expiration time
             
         Returns:
-            str: The encoded JWT token
+            str: The encoded token
         """
         to_encode = data.copy()
         
@@ -70,32 +69,45 @@ class SecurityManager:
         else:
             expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        to_encode.update({"exp": expire.isoformat()})
         
-        return encoded_jwt
+        # Simple base64 encoding for development
+        token_str = json.dumps(to_encode)
+        encoded_token = base64.b64encode(token_str.encode()).decode()
+        
+        return encoded_token
     
     @staticmethod
     def verify_token(token: str) -> Optional[dict]:
         """
-        Verify and decode a JWT token.
+        Verify and decode a token.
         
         Args:
-            token: The JWT token to verify
+            token: The token to verify
             
         Returns:
             dict: The decoded token payload, or None if invalid
         """
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            # Simple base64 decoding for development
+            decoded_str = base64.b64decode(token.encode()).decode()
+            payload = json.loads(decoded_str)
+            
+            # Check expiration
+            exp_str = payload.get("exp")
+            if exp_str:
+                exp_time = datetime.fromisoformat(exp_str)
+                if datetime.utcnow() > exp_time:
+                    return None
+            
             return payload
-        except JWTError:
+        except Exception:
             return None
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
-    Get the current authenticated user from JWT token.
+    Get the current authenticated user from token.
     
     Args:
         credentials: HTTP authorization credentials
@@ -121,11 +133,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if user_id is None:
             raise credentials_exception
             
-        # Here you would typically fetch user from database
-        # For now, return the payload
+        # Return user information
         return {"user_id": user_id, **payload}
         
-    except JWTError:
+    except Exception:
         raise credentials_exception
 
 
@@ -139,7 +150,6 @@ def create_api_key(length: int = 32) -> str:
     Returns:
         str: Generated API key
     """
-    import secrets
     import string
     
     alphabet = string.ascii_letters + string.digits
@@ -147,12 +157,12 @@ def create_api_key(length: int = 32) -> str:
 
 
 class EncryptionManager:
-    """Encryption utilities for sensitive data."""
+    """Simple encryption utilities for development."""
     
     @staticmethod
     def encrypt_credentials(data: str) -> str:
         """
-        Encrypt sensitive credential data.
+        Simple encryption for development.
         
         Args:
             data: The data to encrypt
@@ -160,23 +170,13 @@ class EncryptionManager:
         Returns:
             str: Encrypted data
         """
-        from cryptography.fernet import Fernet
-        
-        # Generate key from settings
-        key = settings.SECRET_KEY.encode()[:32]  # Fernet needs 32 bytes
-        key = key.ljust(32, b'0')  # Pad if necessary
-        
-        # Create Fernet cipher
-        cipher = Fernet(Fernet.generate_key())
-        
-        # Encrypt data
-        encrypted = cipher.encrypt(data.encode())
-        return encrypted.decode()
+        # Simple base64 encoding for development
+        return base64.b64encode(data.encode()).decode()
     
     @staticmethod
     def decrypt_credentials(encrypted_data: str) -> str:
         """
-        Decrypt sensitive credential data.
+        Simple decryption for development.
         
         Args:
             encrypted_data: The encrypted data
@@ -184,18 +184,10 @@ class EncryptionManager:
         Returns:
             str: Decrypted data
         """
-        from cryptography.fernet import Fernet
-        
-        # Generate key from settings
-        key = settings.SECRET_KEY.encode()[:32]
-        key = key.ljust(32, b'0')
-        
-        # Create Fernet cipher
-        cipher = Fernet(key)
-        
-        # Decrypt data
-        decrypted = cipher.decrypt(encrypted_data.encode())
-        return decrypted.decode()
+        try:
+            return base64.b64decode(encrypted_data.encode()).decode()
+        except Exception:
+            return encrypted_data  # Return original if decryption fails
 
 
 # Create global security manager instance

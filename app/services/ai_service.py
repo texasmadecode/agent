@@ -5,7 +5,7 @@ This module provides AI-powered content generation capabilities
 using OpenAI's API for creating captions, hashtags, and optimizing content.
 """
 
-import openai
+from openai import OpenAI
 from typing import Dict, List, Optional, Any
 import logging
 import json
@@ -14,8 +14,8 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configure OpenAI
-openai.api_key = settings.OPENAI_API_KEY
+# Configure OpenAI client
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 class AIContentGenerator:
@@ -26,7 +26,7 @@ class AIContentGenerator:
         self.model = "gpt-3.5-turbo"
         self.max_tokens = 500
     
-    async def generate_caption(
+    def generate_caption(
         self,
         content_description: str,
         platform: str,
@@ -50,7 +50,7 @@ class AIContentGenerator:
                 content_description, platform, brand_voice, target_audience
             )
             
-            response = await openai.ChatCompletion.acreate(
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
@@ -66,7 +66,7 @@ class AIContentGenerator:
             logger.error(f"Error generating caption: {e}")
             return self._get_fallback_caption(content_description, platform)
     
-    async def generate_hashtags(
+    def generate_hashtags(
         self,
         content_description: str,
         platform: str,
@@ -90,7 +90,7 @@ class AIContentGenerator:
                 content_description, platform, target_audience, count
             )
             
-            response = await openai.ChatCompletion.acreate(
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200,
@@ -107,7 +107,7 @@ class AIContentGenerator:
             logger.error(f"Error generating hashtags: {e}")
             return self._get_fallback_hashtags(content_description)
     
-    async def optimize_content(
+    def optimize_content(
         self,
         content: str,
         platform: str,
@@ -127,7 +127,7 @@ class AIContentGenerator:
         try:
             prompt = self._build_optimization_prompt(content, platform, performance_data)
             
-            response = await openai.ChatCompletion.acreate(
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
@@ -151,7 +151,7 @@ class AIContentGenerator:
             logger.error(f"Error optimizing content: {e}")
             return {"optimized_content": content, "suggestions": [], "confidence_score": 0.0}
     
-    async def analyze_brand_compliance(
+    def analyze_brand_compliance(
         self,
         content: str,
         brand_guidelines: str
@@ -185,7 +185,7 @@ class AIContentGenerator:
             Format your response as JSON.
             """
             
-            response = await openai.ChatCompletion.acreate(
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=400,

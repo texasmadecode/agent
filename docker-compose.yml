@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-marketing_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-marketing_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketing_password_123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-marketing_admin} -d ${POSTGRES_DB:-marketing_agent}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and task queue
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Marketing Agent API
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-marketing_admin}:${POSTGRES_PASSWORD:-marketing_password_123}@postgres:5432/${POSTGRES_DB:-marketing_agent}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_password_123}@redis:6379/0
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      
+      # API Keys (set these in .env file)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      
+      # Social Media API Keys
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID}
+      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
+      TWITTER_API_KEY: ${TWITTER_API_KEY}
+      TWITTER_API_SECRET: ${TWITTER_API_SECRET}
+      TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
+      
+      # App Settings
+      DEBUG: ${DEBUG:-false}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 10 &&
+        echo 'Running migrations...' &&
+        alembic upgrade head &&
+        echo 'Initializing database...' &&
+        python -m app.core.init_db &&
+        echo 'Starting API server...' &&
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+  # Celery Worker for background tasks
+  worker:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-marketing_admin}:${POSTGRES_PASSWORD:-marketing_password_123}@postgres:5432/${POSTGRES_DB:-marketing_agent}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_password_123}@redis:6379/0
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      
+      # API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID}
+      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET}
+      TWITTER_API_KEY: ${TWITTER_API_KEY}
+      TWITTER_API_SECRET: ${TWITTER_API_SECRET}
+      TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
+      
+      # Worker Settings
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for services...' &&
+        sleep 15 &&
+        echo 'Starting Celery worker...' &&
+        celery -A app.core.celery worker --loglevel=info
+      "
+
+  # Celery Beat for scheduled tasks
+  scheduler:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-marketing_admin}:${POSTGRES_PASSWORD:-marketing_password_123}@postgres:5432/${POSTGRES_DB:-marketing_agent}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_password_123}@redis:6379/0
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      
+      # Worker Settings
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for services...' &&
+        sleep 20 &&
+        echo 'Starting Celery beat scheduler...' &&
+        celery -A app.core.celery beat --loglevel=info
+      "
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:

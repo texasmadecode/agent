@@ -5,7 +5,7 @@ This module defines database models for content items,
 posts, media files, and content analytics.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -39,7 +39,8 @@ class ContentItem(Base):
     __tablename__ = "content_items"
     
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, nullable=False)  # Foreign key to clients table
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)  # Optional campaign association
     
     # Content details
     title = Column(String(255))
@@ -92,9 +93,9 @@ class ScheduledPost(Base):
     __tablename__ = "scheduled_posts"
     
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, nullable=False)  # Foreign key to clients table
-    campaign_id = Column(Integer)  # Optional foreign key to campaigns table
-    content_item_id = Column(Integer)  # Foreign key to content_items table
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
+    content_item_id = Column(Integer, ForeignKey("content_items.id"), nullable=True)
     
     # Platform and account
     platform = Column(String(50), nullable=False)
@@ -139,9 +140,9 @@ class Post(Base):
     __tablename__ = "posts"
     
     id = Column(Integer, primary_key=True, index=True)
-    scheduled_post_id = Column(Integer)  # Foreign key to scheduled_posts table
-    content_item_id = Column(Integer)  # Foreign key to content_items table
-    social_account_id = Column(Integer, nullable=False)  # Foreign key to social_accounts table
+    scheduled_post_id = Column(Integer, ForeignKey("scheduled_posts.id"), nullable=True)
+    content_item_id = Column(Integer, ForeignKey("content_items.id"), nullable=True)
+    social_account_id = Column(Integer, ForeignKey("social_accounts.id"), nullable=False)
     
     # Post details
     platform_post_id = Column(String(255), nullable=False)  # Platform-specific post ID
@@ -184,7 +185,7 @@ class PostAnalytics(Base):
     __tablename__ = "post_analytics"
     
     id = Column(Integer, primary_key=True, index=True)
-    post_id = Column(Integer, nullable=False)  # Foreign key to posts table
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
     
     # Time-based metrics
     recorded_at = Column(DateTime(timezone=True), nullable=False)

@@ -5,7 +5,8 @@ This module handles all application settings and environment variables,
 providing a centralized configuration system with validation.
 """
 
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import Optional
 import os
 
@@ -14,20 +15,20 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
     
     # Application settings
-    DEBUG: bool = Field(default=False, env="DEBUG")
+    DEBUG: bool = Field(default=True, env="DEBUG")
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    SECRET_KEY: str = Field(..., env="SECRET_KEY")
+    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     ALGORITHM: str = Field(default="HS256", env="ALGORITHM")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     
-    # Database settings
-    DATABASE_URL: str = Field(..., env="DATABASE_URL")
+    # Database settings - using SQLite for development
+    DATABASE_URL: str = Field(default="sqlite:///./marketing_agent.db", env="DATABASE_URL")
     
     # Redis settings
     REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
     
     # OpenAI API settings
-    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
+    OPENAI_API_KEY: str = Field(default="your-openai-key-here", env="OPENAI_API_KEY")
     
     # Social Media API settings
     TWITTER_API_KEY: Optional[str] = Field(default=None, env="TWITTER_API_KEY")

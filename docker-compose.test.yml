@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  test-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: marketing_agent_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d marketing_agent_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  test-redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  test-api:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@test-postgres:5432/marketing_agent_test
+      - REDIS_URL=redis://test-redis:6379/0
+      - SECRET_KEY=test-secret-key-for-testing
+      - OPENAI_API_KEY=sk-test-key-for-testing
+      - ENVIRONMENT=test
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '🔄 Running database migrations...' &&
+        alembic upgrade head &&
+        echo '🗄️ Initializing test database...' &&
+        python -m app.core.init_db &&
+        echo '🧪 Running test suite...' &&
+        pytest tests/ -v --cov=app --cov-report=html --cov-report=xml --cov-report=term-missing
+      "
+    volumes:
+      - ./tests:/app/tests
+      - ./htmlcov:/app/htmlcov
+      - ./coverage.xml:/app/coverage.xml
