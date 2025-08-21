@@ -71,6 +71,11 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+def get_settings() -> Settings:
+    """Get the application settings."""
+    return settings
+
+
 def get_database_url() -> str:
     """Get the database URL with proper formatting."""
     return settings.DATABASE_URL

@@ -12,7 +12,7 @@ from typing import Dict, Any, List
 from app.core.celery import celery_app
 from app.core.database import SessionLocal
 from app.services.ai_service import ai_content_generator
-from app.tasks.posting_tasks import DatabaseTask
+from app.tasks.base import DatabaseTask
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def generate_content_caption(self, content_id: int, platform: str, brand_guideli
         # In a real implementation, fetch content details from database
         content_description = f"Sample content description for content {content_id}"
         
-        caption = await ai_content_generator.generate_caption(
+        caption = ai_content_generator.generate_caption(
             content_description=content_description,
             platform=platform,
             brand_voice=brand_guidelines.get("brand_voice") if brand_guidelines else None,
@@ -71,7 +71,7 @@ def generate_content_hashtags(self, content_id: int, platform: str, count: int =
         # Fetch content details
         content_description = f"Sample content description for content {content_id}"
         
-        hashtags = await ai_content_generator.generate_hashtags(
+        hashtags = ai_content_generator.generate_hashtags(
             content_description=content_description,
             platform=platform,
             count=count
@@ -109,7 +109,7 @@ def check_brand_compliance(self, content_id: int, brand_guidelines: str, db=None
         # Fetch content
         content_text = f"Sample content text for content {content_id}"
         
-        compliance_result = await ai_content_generator.analyze_brand_compliance(
+        compliance_result = ai_content_generator.analyze_brand_compliance(
             content=content_text,
             brand_guidelines=brand_guidelines
         )
@@ -146,7 +146,7 @@ def optimize_existing_content(self, content_id: int, platform: str, performance_
         # Fetch content
         content_text = f"Sample content text for content {content_id}"
         
-        optimization_result = await ai_content_generator.optimize_content(
+        optimization_result = ai_content_generator.optimize_content(
             content=content_text,
             platform=platform,
             performance_data=performance_data

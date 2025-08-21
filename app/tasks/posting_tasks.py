@@ -12,24 +12,9 @@ from typing import Dict, Any, List
 
 from app.core.celery import celery_app
 from app.core.database import SessionLocal
+from app.tasks.base import DatabaseTask
 
 logger = logging.getLogger(__name__)
-
-
-class DatabaseTask(Task):
-    """Base task class with database session handling."""
-    
-    def __call__(self, *args, **kwargs):
-        """Execute task with database session."""
-        with SessionLocal() as db:
-            try:
-                return self.run(*args, db=db, **kwargs)
-            except Exception as e:
-                db.rollback()
-                logger.error(f"Task {self.name} failed: {e}")
-                raise
-            finally:
-                db.close()
 
 
 @celery_app.task(bind=True, base=DatabaseTask)
