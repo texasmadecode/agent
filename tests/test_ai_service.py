@@ -3,15 +3,15 @@ Unit tests for AI service functionality.
 """
 import pytest
 from unittest.mock import patch, MagicMock
-from app.services.ai_service import OpenAIService
+from app.services.ai_service import AIContentGenerator
 
 
-class TestOpenAIService:
-    """Test OpenAI service integration."""
+class TestAIContentGenerator:
+    """Test AI content generator service."""
     
     def test_service_initialization(self):
-        """Test that OpenAI service initializes correctly."""
-        service = OpenAIService()
+        """Test that AI service initializes correctly."""
+        service = AIContentGenerator()
         assert service is not None
         assert hasattr(service, 'client')
     
@@ -25,25 +25,25 @@ class TestOpenAIService:
         ]
         mock_openai_client.return_value.chat.completions.create.return_value = mock_response
         
-        service = OpenAIService()
-        result = service.generate_content(
-            prompt="Create a social media post",
-            platform="instagram",
-            tone="professional"
+        service = AIContentGenerator()
+        result = service.generate_caption(
+            content_description="Create a social media post",
+            platform="instagram"
         )
         
         assert result == "Generated social media content!"
         mock_openai_client.return_value.chat.completions.create.assert_called_once()
     
-    @patch('app.services.ai_service.OpenAI')
+    @patch('app.services.ai_service.client')
     def test_generate_content_api_error(self, mock_openai_client):
         """Test handling of OpenAI API errors."""
-        mock_openai_client.return_value.chat.completions.create.side_effect = Exception("API Error")
+        mock_openai_client.chat.completions.create.side_effect = Exception("API Error")
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         
-        with pytest.raises(Exception):
-            service.generate_content("Test prompt")
+        # Test that the service returns fallback content instead of raising
+        result = service.generate_caption("Test content description", "instagram")
+        assert result is not None  # Should return fallback caption
     
     @patch('app.services.ai_service.OpenAI')
     def test_generate_hashtags(self, mock_openai_client):
@@ -54,7 +54,7 @@ class TestOpenAIService:
         ]
         mock_openai_client.return_value.chat.completions.create.return_value = mock_response
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         result = service.generate_hashtags("marketing content", "instagram")
         
         assert "#marketing" in result
@@ -69,7 +69,7 @@ class TestOpenAIService:
         ]
         mock_openai_client.return_value.chat.completions.create.return_value = mock_response
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         result = service.optimize_content(
             content="Original content",
             platform="instagram",
@@ -80,7 +80,7 @@ class TestOpenAIService:
     
     def test_platform_specific_prompts(self):
         """Test that platform-specific prompts are used."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         
         # Test Instagram prompt
         instagram_prompt = service._build_prompt("Test content", "instagram", "casual")
@@ -92,7 +92,7 @@ class TestOpenAIService:
     
     def test_tone_adaptation(self):
         """Test that content tone is properly adapted."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         
         # Test professional tone
         professional_prompt = service._build_prompt("Test", "linkedin", "professional")
@@ -106,12 +106,12 @@ class TestOpenAIService:
 class TestAIServiceIntegration:
     """Test AI service integration with other components."""
     
-    @patch('app.services.ai_service.OpenAIService.generate_content')
+    @patch('app.services.ai_service.AIContentGenerator.generate_content')
     def test_content_generation_with_brand_voice(self, mock_generate):
         """Test content generation with brand voice considerations."""
         mock_generate.return_value = "Brand-consistent content"
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         result = service.generate_branded_content(
             prompt="Product announcement",
             brand_voice="friendly and approachable",
@@ -121,7 +121,7 @@ class TestAIServiceIntegration:
         assert result == "Brand-consistent content"
         mock_generate.assert_called_once()
     
-    @patch('app.services.ai_service.OpenAIService.generate_content')
+    @patch('app.services.ai_service.AIContentGenerator.generate_content')
     def test_batch_content_generation(self, mock_generate):
         """Test generating multiple content pieces at once."""
         mock_generate.side_effect = [
@@ -130,7 +130,7 @@ class TestAIServiceIntegration:
             "Content piece 3"
         ]
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
         results = service.generate_batch_content(prompts, "instagram")
         
@@ -140,7 +140,7 @@ class TestAIServiceIntegration:
     
     def test_content_safety_filtering(self):
         """Test that inappropriate content is filtered out."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         
         # Test with potentially inappropriate content
         unsafe_content = "This content contains inappropriate material"
@@ -155,18 +155,18 @@ class TestAIServiceConfiguration:
     
     def test_api_key_configuration(self):
         """Test that API key is properly configured."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         # Don't expose actual API key in tests
         assert hasattr(service, 'client')
     
     def test_model_configuration(self):
         """Test that the correct AI model is used."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         assert service.model in ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
     
     def test_rate_limiting_awareness(self):
         """Test that service handles rate limiting."""
-        service = OpenAIService()
+        service = AIContentGenerator()
         # Should have rate limiting logic or error handling
         assert hasattr(service, 'generate_content')
     
@@ -179,7 +179,7 @@ class TestAIServiceConfiguration:
             MagicMock(choices=[MagicMock(message=MagicMock(content="Success"))])
         ]
         
-        service = OpenAIService()
+        service = AIContentGenerator()
         # This would test retry logic if implemented
         # For now, just test that service can handle errors
         try:
