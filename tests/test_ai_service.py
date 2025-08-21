@@ -13,7 +13,8 @@ class TestAIContentGenerator:
         """Test that AI service initializes correctly."""
         service = AIContentGenerator()
         assert service is not None
-        assert hasattr(service, 'client')
+        assert hasattr(service, 'model')
+        assert service.model in ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
     
     @patch('app.services.ai_service.OpenAI')
     def test_generate_content_success(self, mock_openai_client):
