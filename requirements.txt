@@ -19,7 +19,7 @@ requests==2.31.0
 httpx==0.25.2
 
 # AI & Content Generation
-openai==1.3.0
+openai==2.6.1
 # pillow==10.1.0  # Commented out due to build issues
 
 # Security & Encryption
